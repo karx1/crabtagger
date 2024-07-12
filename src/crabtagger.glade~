@@ -30,6 +30,22 @@
           </packing>
         </child>
         <child>
+          <object class="GtkFileChooserButton" id="song_picker">
+            <property name="visible">True</property>
+            <property name="can-focus">False</property>
+            <property name="margin-start">15</property>
+            <property name="margin-end">15</property>
+            <property name="margin-top">15</property>
+            <property name="margin-bottom">15</property>
+            <property name="title" translatable="yes"/>
+          </object>
+          <packing>
+            <property name="expand">True</property>
+            <property name="fill">True</property>
+            <property name="position">1</property>
+          </packing>
+        </child>
+        <child>
           <!-- n-columns=2 n-rows=1 -->
           <object class="GtkGrid">
             <property name="visible">True</property>
@@ -178,9 +194,9 @@
             </child>
           </object>
           <packing>
-            <property name="expand">False</property>
+            <property name="expand">True</property>
             <property name="fill">True</property>
-            <property name="position">1</property>
+            <property name="position">2</property>
           </packing>
         </child>
       </object>

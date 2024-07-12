@@ -1,6 +1,6 @@
 use gtk::gdk::Screen;
 use gtk::prelude::*;
-use gtk::{glib, Application, ApplicationWindow, Builder, CssProvider};
+use gtk::{glib, Application, ApplicationWindow, Builder, CssProvider, FileChooserButton};
 
 const APP_ID: &str = "xyz.karx.CRABTAGGER";
 
@@ -30,6 +30,11 @@ fn build_ui(app: &Application) {
     let builder = Builder::from_string(include_str!("crabtagger.glade"));
 
     let window: ApplicationWindow = builder.object("window").unwrap();
+    let song_upload_button: FileChooserButton = builder.object("song_picker").unwrap();
+    song_upload_button.connect_file_set(|b: &FileChooserButton| {
+        println!("File picked!");
+        println!("Pathname: {}", b.filename().unwrap().to_string_lossy());
+    });
 
     // let window = ApplicationWindow::builder()
     // .application(app)
