@@ -3,7 +3,11 @@ use gtk::gdk_pixbuf::Pixbuf;
 use gtk::gio::{Cancellable, MemoryInputStream};
 use gtk::glib::{self, clone, Bytes};
 use gtk::prelude::*;
-use gtk::{Application, ApplicationWindow, Builder, CssProvider, Entry, FileChooserButton, Image};
+use gtk::{
+    Application, ApplicationWindow, Builder, Button, CssProvider, Entry, FileChooserButton, Image,
+    Window,
+};
+use gtk::{ButtonsType, DialogFlags, MessageDialog, MessageType};
 use id3::{Tag, TagLike};
 
 const APP_ID: &str = "xyz.karx.CRABTAGGER";
@@ -30,6 +34,19 @@ fn load_css() {
     );
 }
 
+fn errormsg<P: IsA<Window>>(text: &str, parent: Option<&P>) {
+    // stolen from https://git.lemonsh.moe/lemon/zdiu
+    let dialog = MessageDialog::new(
+        parent,
+        DialogFlags::MODAL,
+        MessageType::Error,
+        ButtonsType::Ok,
+        text,
+    );
+    dialog.run();
+    dialog.close();
+}
+
 fn build_ui(app: &Application) {
     let builder = Builder::from_string(include_str!("crabtagger.glade"));
 
@@ -40,9 +57,10 @@ fn build_ui(app: &Application) {
     let album_entry: Entry = builder.object("album_entry").unwrap();
     let cover: Image = builder.object("cover").unwrap();
     let image_upload_button: FileChooserButton = builder.object("image_upload").unwrap();
+    let save_button: Button = builder.object("save").unwrap();
 
     song_upload_button.connect_file_set(
-        clone!(@weak title_entry, @weak artist_entry, @weak album_entry, @weak cover => move |b: &FileChooserButton| {
+        clone!(@weak title_entry, @weak artist_entry, @weak album_entry, @weak cover, @weak window => move |b: &FileChooserButton| {
             println!("File picked!");
             let filename = b.filename().unwrap();
             println!("Pathname: {}", filename.to_string_lossy());
@@ -75,6 +93,9 @@ fn build_ui(app: &Application) {
             let picture_maybe = tag.pictures().nth(0); // borrow checker moment
             if let Some(picture) = picture_maybe {
                 println!("{}", picture.mime_type);
+                if picture.mime_type == "image/webp" {
+                    errormsg("WebP Image detected. Please replace with a JPEG/PMG image for maximum compatibility!", Some(&window));
+                }
                 let bytes = Bytes::from(&picture.data);
                 let stream = MemoryInputStream::from_bytes(&bytes);
                 let pixbuf = Pixbuf::from_stream_at_scale(&stream, 200, 200, true, Cancellable::NONE);
