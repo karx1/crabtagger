@@ -39,6 +39,7 @@ fn build_ui(app: &Application) {
     let artist_entry: Entry = builder.object("artist_entry").unwrap();
     let album_entry: Entry = builder.object("album_entry").unwrap();
     let cover: Image = builder.object("cover").unwrap();
+    let image_upload_button: FileChooserButton = builder.object("image_upload").unwrap();
 
     song_upload_button.connect_file_set(
         clone!(@weak title_entry, @weak artist_entry, @weak album_entry, @weak cover => move |b: &FileChooserButton| {
@@ -84,11 +85,12 @@ fn build_ui(app: &Application) {
         }),
     );
 
-    // let window = ApplicationWindow::builder()
-    // .application(app)
-    // .title("Crabtagger")
-    // .child(&label)
-    // .build();
+    image_upload_button.connect_file_set(clone!(@weak cover => move |b: &FileChooserButton| {
+        println!("Image picked!");
+        let filename = b.filename().unwrap();
+        let pixbuf = Pixbuf::from_file_at_scale(&filename, 200, 200, true);
+        cover.set_from_pixbuf(pixbuf.ok().as_ref());
+    }));
 
     window.set_application(Some(app));
     window.present();

@@ -9,6 +9,14 @@
       <mime-type>audio/aiff</mime-type>
     </mime-types>
   </object>
+  <object class="GtkFileFilter" id="filefilter2">
+    <mime-types>
+      <mime-type>image/jpeg</mime-type>
+      <mime-type>image/png</mime-type>
+      <mime-type>image/webp</mime-type>
+      <mime-type>image/gif</mime-type>
+    </mime-types>
+  </object>
   <object class="GtkApplicationWindow" id="window">
     <property name="can-focus">False</property>
     <property name="hexpand">True</property>
@@ -104,6 +112,7 @@
                     <property name="margin-end">30</property>
                     <property name="margin-top">15</property>
                     <property name="margin-bottom">15</property>
+                    <property name="filter">filefilter2</property>
                     <property name="title" translatable="yes">Upload Image</property>
                   </object>
                   <packing>
