@@ -1,6 +1,7 @@
+use gio::prelude::FileExt;
 use gtk::gdk::Screen;
 use gtk::gdk_pixbuf::Pixbuf;
-use gtk::gio::{Cancellable, MemoryInputStream};
+use gtk::gio::{self, Cancellable, MemoryInputStream};
 use gtk::glib::{self, clone, Bytes};
 use gtk::prelude::*;
 use gtk::{
@@ -8,7 +9,11 @@ use gtk::{
     Window,
 };
 use gtk::{ButtonsType, DialogFlags, MessageDialog, MessageType};
-use id3::{Tag, TagLike};
+use id3::{
+    frame::{Picture, PictureType},
+    Tag, TagLike, Version as IdVersion,
+};
+use mime_sniffer::MimeTypeSniffer;
 
 const APP_ID: &str = "xyz.karx.CRABTAGGER";
 
@@ -87,14 +92,11 @@ fn build_ui(app: &Application) {
                 album_entry.set_text("");
             }
 
-            // if let Some(picture) = tag.pictures().cloned().nth(0) {
-                // println!("{}", picture.mime_type);
-            // }
             let picture_maybe = tag.pictures().nth(0); // borrow checker moment
             if let Some(picture) = picture_maybe {
-                println!("{}", picture.mime_type);
+                println!("{}", picture.picture_type);
                 if picture.mime_type == "image/webp" {
-                    errormsg("WebP Image detected. Please replace with a JPEG/PMG image for maximum compatibility!", Some(&window));
+                    errormsg("WebP Image detected. Please replace with a JPEG/PNG image for maximum compatibility!", Some(&window));
                 }
                 let bytes = Bytes::from(&picture.data);
                 let stream = MemoryInputStream::from_bytes(&bytes);
@@ -112,6 +114,48 @@ fn build_ui(app: &Application) {
         let pixbuf = Pixbuf::from_file_at_scale(&filename, 200, 200, true);
         cover.set_from_pixbuf(pixbuf.ok().as_ref());
     }));
+
+    save_button.connect_clicked(
+        clone!(@weak song_upload_button, @weak window, @weak title_entry, @weak artist_entry, @weak album_entry, @weak image_upload_button => move |_| {
+            if let Some(filename) = song_upload_button.filename() {
+                let mut tag = Tag::read_from_path(&filename).unwrap_or_default();
+                let title = title_entry.text();
+                let artist = artist_entry.text();
+                let album = album_entry.text();
+                if !title.is_empty() {
+                    tag.set_title(title_entry.text());
+
+                }
+                if !artist.is_empty() {
+                    tag.set_artist(artist_entry.text());
+                }
+                if !album.is_empty() {
+                    tag.set_album(album_entry.text());
+                }
+
+                if let Some(cover_file) = image_upload_button.file() {
+                    if let Ok((bytes, _)) = cover_file.load_bytes(Cancellable::NONE) {
+                        let bytes_owned = bytes.to_vec();
+                        let mime_type = bytes_owned.sniff_mime_type().unwrap_or("image/jpg").to_string(); // theoretically all opened image should have sniffable mime types so this is ok
+                        println!("{mime_type}");
+                        tag.add_frame(Picture {
+                            mime_type,
+                            picture_type: PictureType::CoverFront,
+                            description: "".into(),
+                            data: bytes_owned
+                        });
+                    }
+                }
+
+                let res = tag.write_to_path(&filename, IdVersion::Id3v24);
+                if res.is_err() {
+                    errormsg("Unable to write to file!", Some(&window));
+                }
+            } else {
+                errormsg("No song selected!", Some(&window));
+            }
+        }),
+    );
 
     window.set_application(Some(app));
     window.present();

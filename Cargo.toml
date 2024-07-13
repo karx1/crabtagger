@@ -8,3 +8,4 @@ edition = "2021"
 [dependencies]
 gtk = "0.18.1"
 id3 = "1.14.0"
+mime-sniffer = "0.1.2"
