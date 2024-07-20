@@ -39,14 +39,19 @@ fn load_css() {
     );
 }
 
-fn errormsg<P: IsA<Window>>(text: &str, parent: Option<&P>) {
-    // stolen from https://git.lemonsh.moe/lemon/zdiu
+fn message<S: AsRef<str>, P: IsA<Window>>(
+    text: S,
+    parent: Option<&P>,
+    msg_type: MessageType,
+    button_type: ButtonsType,
+) {
+    // partially stolen from https://git.lemonsh.moe/lemon/zdiu
     let dialog = MessageDialog::new(
         parent,
         DialogFlags::MODAL,
-        MessageType::Error,
-        ButtonsType::Ok,
-        text,
+        msg_type,
+        button_type,
+        text.as_ref(),
     );
     dialog.run();
     dialog.close();
@@ -96,7 +101,7 @@ fn build_ui(app: &Application) {
             if let Some(picture) = picture_maybe {
                 println!("{}", picture.picture_type);
                 if picture.mime_type == "image/webp" {
-                    errormsg("WebP Image detected. Please replace with a JPEG/PNG image for maximum compatibility!", Some(&window));
+                    message("WebP Image detected. Please replace with a JPEG/PNG image for maximum compatibility!", Some(&window), MessageType::Error, ButtonsType::Ok);
                 }
                 let bytes = Bytes::from(&picture.data);
                 let stream = MemoryInputStream::from_bytes(&bytes);
@@ -148,11 +153,16 @@ fn build_ui(app: &Application) {
                 }
 
                 let res = tag.write_to_path(&filename, IdVersion::Id3v24);
-                if res.is_err() {
-                    errormsg("Unable to write to file!", Some(&window));
+                if let Err(e) = res {
+                    message(
+                        format!("Encountered an error while saving: {}", e),
+                        Some(&window),
+                        MessageType::Error,
+                        ButtonsType::Ok
+                    );
                 }
             } else {
-                errormsg("No song selected!", Some(&window));
+                message("No song selected!", Some(&window), MessageType::Error, ButtonsType::Ok);
             }
         }),
     );
