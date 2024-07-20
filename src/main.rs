@@ -5,8 +5,8 @@ use gtk::gio::{self, Cancellable, MemoryInputStream};
 use gtk::glib::{self, clone, Bytes};
 use gtk::prelude::*;
 use gtk::{
-    Application, ApplicationWindow, Builder, Button, CssProvider, Entry, FileChooserButton, Image,
-    Window,
+    Application, ApplicationWindow, Builder, Button, CssProvider, Entry, FileChooserButton,
+    IconSize, Image, Window,
 };
 use gtk::{ButtonsType, DialogFlags, MessageDialog, MessageType};
 use id3::{
@@ -160,6 +160,14 @@ fn build_ui(app: &Application) {
                         MessageType::Error,
                         ButtonsType::Ok
                     );
+                } else {
+                    song_upload_button.unselect_all();
+                    image_upload_button.unselect_all();
+                    title_entry.set_text("");
+                    artist_entry.set_text("");
+                    album_entry.set_text("");
+                    cover.set_from_icon_name(Some("audio-card"), IconSize::Button);
+                    message("Saved successfully!", Some(&window), MessageType::Info, ButtonsType::Ok);
                 }
             } else {
                 message("No song selected!", Some(&window), MessageType::Error, ButtonsType::Ok);
