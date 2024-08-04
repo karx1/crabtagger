@@ -178,6 +178,28 @@ fn build_ui(app: &Application) {
         }),
     );
 
+    year_entry.connect_insert_text(|entry, text, position| {
+        entry_disallow(&entry, &text, |c: char| !c.is_ascii_digit(), position)
+    });
+    month_entry.connect_insert_text(|entry, text, position| {
+        entry_disallow(&entry, &text, |c: char| !c.is_ascii_digit(), position)
+    });
+    day_entry.connect_insert_text(|entry, text, position| {
+        entry_disallow(&entry, &text, |c: char| !c.is_ascii_digit(), position)
+    });
+
     window.set_application(Some(app));
     window.present();
+}
+
+fn entry_disallow<F: FnMut(char) -> bool, S: AsRef<str>>(
+    entry: &Entry,
+    text: S,
+    mut predicate: F,
+    position: &mut i32,
+) {
+    if text.as_ref().contains(|x| predicate(x)) {
+        glib::signal::signal_stop_emission_by_name(entry, "insert-text");
+        entry.insert_text(&text.as_ref().replace(predicate, ""), position);
+    }
 }
