@@ -66,6 +66,9 @@ fn build_ui(app: &Application) {
     let cover: Image = builder.object("cover").unwrap();
     let image_upload_button: FileChooserButton = builder.object("image_upload").unwrap();
     let save_button: Button = builder.object("save").unwrap();
+    let year_entry: Entry = builder.object("year").unwrap();
+    let month_entry: Entry = builder.object("month").unwrap();
+    let day_entry: Entry = builder.object("day").unwrap();
 
     song_upload_button.connect_file_set(
         clone!(@weak title_entry, @weak artist_entry, @weak album_entry, @weak cover, @weak window => move |b: &FileChooserButton| {
