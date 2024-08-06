@@ -6,6 +6,6 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+audiotags = "0.5.0"
 gtk = "0.18.1"
-id3 = "1.14.0"
 mime-sniffer = "0.1.2"
