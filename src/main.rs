@@ -1,3 +1,5 @@
+use audiotags::types::{MimeType, Picture};
+use audiotags::Tag;
 use gio::prelude::FileExt;
 use gtk::gdk::Screen;
 use gtk::gdk_pixbuf::Pixbuf;
@@ -9,10 +11,6 @@ use gtk::{
     IconSize, Image, Window,
 };
 use gtk::{ButtonsType, DialogFlags, MessageDialog, MessageType};
-use id3::{
-    frame::{Picture, PictureType},
-    Tag, TagLike, Version as IdVersion,
-};
 use mime_sniffer::MimeTypeSniffer;
 
 const APP_ID: &str = "xyz.karx.CRABTAGGER";
@@ -74,10 +72,7 @@ fn build_ui(app: &Application) {
             println!("File picked!");
             let filename = b.filename().unwrap();
             println!("Pathname: {}", filename.to_string_lossy());
-            let tag = Tag::read_from_path(&filename).unwrap_or_default();
-            for frame in tag.frames() {
-                println!("{frame}");
-            }
+            let tag = Tag::new().read_from_path(&filename).unwrap();
 
             if let Some(title) = tag.title() {
                 title_entry.set_text(title);
@@ -92,17 +87,16 @@ fn build_ui(app: &Application) {
             }
 
             if let Some(album) = tag.album() {
-                album_entry.set_text(album);
+                album_entry.set_text(album.title);
             } else {
                 album_entry.set_text("");
             }
 
-            let picture_maybe = tag.pictures().nth(0); // borrow checker moment
+            let picture_maybe = tag.album_cover();
             if let Some(picture) = picture_maybe {
-                println!("{}", picture.picture_type);
-                if picture.mime_type == "image/webp" {
-                    message("WebP Image detected. Please replace with a JPEG/PNG image for maximum compatibility!", Some(&window), MessageType::Error, ButtonsType::Ok);
-                }
+                // if picture.mime_type == "image/webp" {
+                    // message("WebP Image detected. Please replace with a JPEG/PNG image for maximum compatibility!", Some(&window), MessageType::Error, ButtonsType::Ok);
+                // }
                 let bytes = Bytes::from(&picture.data);
                 let stream = MemoryInputStream::from_bytes(&bytes);
                 let pixbuf = Pixbuf::from_stream_at_scale(&stream, 200, 200, true, Cancellable::NONE);
@@ -123,51 +117,53 @@ fn build_ui(app: &Application) {
     save_button.connect_clicked(
         clone!(@weak song_upload_button, @weak window, @weak title_entry, @weak artist_entry, @weak album_entry, @weak image_upload_button => move |_| {
             if let Some(filename) = song_upload_button.filename() {
-                let mut tag = Tag::read_from_path(&filename).unwrap_or_default();
+                let mut tag = Tag::new().read_from_path(&filename).unwrap();
                 let title = title_entry.text();
                 let artist = artist_entry.text();
                 let album = album_entry.text();
                 if !title.is_empty() {
-                    tag.set_title(title_entry.text());
+                    tag.set_title(&title_entry.text());
 
                 }
                 if !artist.is_empty() {
-                    tag.set_artist(artist_entry.text());
+                    tag.set_artist(&artist_entry.text());
                 }
                 if !album.is_empty() {
-                    tag.set_album(album_entry.text());
+                    tag.set_album_title(&album_entry.text());
                 }
 
                 if let Some(cover_file) = image_upload_button.file() {
                     if let Ok((bytes, _)) = cover_file.load_bytes(Cancellable::NONE) {
                         let bytes_owned = bytes.to_vec();
-                        let mime_type = bytes_owned.sniff_mime_type().unwrap_or("image/jpg").to_string(); // theoretically all opened image should have sniffable mime types so this is ok
-                        println!("{mime_type}");
-                        tag.add_frame(Picture {
+                        let mime_type = MimeType::try_from(bytes_owned.sniff_mime_type().unwrap_or("image/jpeg")).unwrap_or(MimeType::Jpeg);
+                        println!("{}", String::from(mime_type));
+                        tag.set_album_cover(Picture {
                             mime_type,
-                            picture_type: PictureType::CoverFront,
-                            description: "".into(),
-                            data: bytes_owned
+                            data: &bytes_owned
                         });
                     }
                 }
 
-                let res = tag.write_to_path(&filename, IdVersion::Id3v24);
-                if let Err(e) = res {
-                    message(
-                        format!("Encountered an error while saving: {}", e),
-                        Some(&window),
-                        MessageType::Error,
-                        ButtonsType::Ok
-                    );
+                if let Some(file_str) = filename.to_str() {
+                    let res = tag.write_to_path(file_str);
+                    if let Err(e) = res {
+                        message(
+                            format!("Encountered an error while saving: {}", e),
+                            Some(&window),
+                            MessageType::Error,
+                            ButtonsType::Ok
+                        );
+                    } else {
+                        song_upload_button.unselect_all();
+                        image_upload_button.unselect_all();
+                        title_entry.set_text("");
+                        artist_entry.set_text("");
+                        album_entry.set_text("");
+                        cover.set_from_icon_name(Some("audio-card"), IconSize::Button);
+                        message("Saved successfully!", Some(&window), MessageType::Info, ButtonsType::Ok);
+                    }
                 } else {
-                    song_upload_button.unselect_all();
-                    image_upload_button.unselect_all();
-                    title_entry.set_text("");
-                    artist_entry.set_text("");
-                    album_entry.set_text("");
-                    cover.set_from_icon_name(Some("audio-card"), IconSize::Button);
-                    message("Saved successfully!", Some(&window), MessageType::Info, ButtonsType::Ok);
+                    message("Filenames containing non-unicode characters are not supported, please rename the file and try again!", Some(&window), MessageType::Error, ButtonsType::Ok);
                 }
             } else {
                 message("No song selected!", Some(&window), MessageType::Error, ButtonsType::Ok);
