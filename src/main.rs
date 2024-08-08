@@ -1,5 +1,3 @@
-use audiotags::types::{MimeType, Picture};
-use audiotags::Tag;
 use gio::prelude::FileExt;
 use gtk::gdk::Screen;
 use gtk::gdk_pixbuf::Pixbuf;
@@ -12,6 +10,8 @@ use gtk::{
 };
 use gtk::{ButtonsType, DialogFlags, MessageDialog, MessageType};
 use mime_sniffer::MimeTypeSniffer;
+use multitag::data::Picture;
+use multitag::Tag;
 
 const APP_ID: &str = "xyz.karx.CRABTAGGER";
 
@@ -72,7 +72,7 @@ fn build_ui(app: &Application) {
             println!("File picked!");
             let filename = b.filename().unwrap();
             println!("Pathname: {}", filename.to_string_lossy());
-            let tag = Tag::new().read_from_path(&filename).unwrap();
+            let tag = Tag::read_from_path(&filename).unwrap();
 
             if let Some(title) = tag.title() {
                 title_entry.set_text(title);
@@ -81,28 +81,27 @@ fn build_ui(app: &Application) {
             }
 
             if let Some(artist) = tag.artist() {
-                artist_entry.set_text(artist);
+                artist_entry.set_text(&artist);
             } else {
                 artist_entry.set_text("");
             }
 
-            if let Some(album) = tag.album() {
-                album_entry.set_text(album.title);
-            } else {
-                album_entry.set_text("");
-            }
-
-            let picture_maybe = tag.album_cover();
-            if let Some(picture) = picture_maybe {
+            if let Some(album) = tag.get_album_info() {
+                album_entry.set_text(&album.title);
+                let picture_maybe = album.cover;
+                if let Some(picture) = picture_maybe {
                 // if picture.mime_type == "image/webp" {
                     // message("WebP Image detected. Please replace with a JPEG/PNG image for maximum compatibility!", Some(&window), MessageType::Error, ButtonsType::Ok);
                 // }
-                let bytes = Bytes::from(&picture.data);
-                let stream = MemoryInputStream::from_bytes(&bytes);
-                let pixbuf = Pixbuf::from_stream_at_scale(&stream, 200, 200, true, Cancellable::NONE);
-                cover.set_from_pixbuf(pixbuf.ok().as_ref());
+                    let bytes = Bytes::from(&picture.data);
+                    let stream = MemoryInputStream::from_bytes(&bytes);
+                    let pixbuf = Pixbuf::from_stream_at_scale(&stream, 200, 200, true, Cancellable::NONE);
+                    cover.set_from_pixbuf(pixbuf.ok().as_ref());
+                } else {
+                    cover.set_icon_name(Some("audio-card"));
+                }
             } else {
-                cover.set_icon_name(Some("audio-card"));
+                album_entry.set_text("");
             }
         }),
     );
@@ -117,7 +116,7 @@ fn build_ui(app: &Application) {
     save_button.connect_clicked(
         clone!(@weak song_upload_button, @weak window, @weak title_entry, @weak artist_entry, @weak album_entry, @weak image_upload_button => move |_| {
             if let Some(filename) = song_upload_button.filename() {
-                let mut tag = Tag::new().read_from_path(&filename).unwrap();
+                let mut tag = Tag::read_from_path(&filename).unwrap();
                 let title = title_entry.text();
                 let artist = artist_entry.text();
                 let album = album_entry.text();
@@ -129,18 +128,23 @@ fn build_ui(app: &Application) {
                     tag.set_artist(&artist_entry.text());
                 }
                 if !album.is_empty() {
-                    tag.set_album_title(&album_entry.text());
+                    let mut album_info = tag.get_album_info().unwrap_or_default();
+                    album_info.title = album_entry.text().to_string();
+
+                    tag.set_album_info(album_info);
                 }
 
                 if let Some(cover_file) = image_upload_button.file() {
                     if let Ok((bytes, _)) = cover_file.load_bytes(Cancellable::NONE) {
                         let bytes_owned = bytes.to_vec();
-                        let mime_type = MimeType::try_from(bytes_owned.sniff_mime_type().unwrap_or("image/jpeg")).unwrap_or(MimeType::Jpeg);
-                        println!("{}", String::from(mime_type));
-                        tag.set_album_cover(Picture {
+                        let mut album_info = tag.get_album_info().unwrap_or_default();
+                        // all mime types should be sniffable so this is ok
+                        let mime_type = bytes_owned.sniff_mime_type().unwrap_or("image/jpeg").to_string();
+                        album_info.cover = Some(Picture {
                             mime_type,
-                            data: &bytes_owned
+                            data: bytes_owned
                         });
+                        tag.set_album_info(album_info);
                     }
                 }
 
