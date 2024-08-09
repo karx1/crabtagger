@@ -11,6 +11,7 @@ use gtk::{
 use gtk::{ButtonsType, DialogFlags, MessageDialog, MessageType};
 use mime_sniffer::MimeTypeSniffer;
 use multitag::data::Picture;
+use multitag::data::Timestamp;
 use multitag::Tag;
 
 const APP_ID: &str = "xyz.karx.CRABTAGGER";
@@ -71,7 +72,7 @@ fn build_ui(app: &Application) {
     let day_entry: Entry = builder.object("day").unwrap();
 
     song_upload_button.connect_file_set(
-        clone!(@weak title_entry, @weak artist_entry, @weak album_entry, @weak cover, @weak window => move |b: &FileChooserButton| {
+        clone!(@weak title_entry, @weak artist_entry, @weak album_entry, @weak cover, @weak window, @weak year_entry, @weak month_entry, @weak day_entry => move |b: &FileChooserButton| {
             println!("File picked!");
             let filename = b.filename().unwrap();
             println!("Pathname: {}", filename.to_string_lossy());
@@ -106,6 +107,17 @@ fn build_ui(app: &Application) {
             } else {
                 album_entry.set_text("");
             }
+
+            if let Some(time) = tag.date() {
+                // todo: wait for remove methods in multitag
+                year_entry.set_text(&Some(time.year).filter(|n: &i32| *n != 0).map(|n| format!("{n:04}")).unwrap_or_default());
+                month_entry.set_text(&time.month.filter(|n: &u8| *n != 0).map(|n| format!("{n:02}")).unwrap_or_default());
+                day_entry.set_text(&time.day.filter(|n: &u8| *n != 0).map(|n| format!("{n:02}")).unwrap_or_default());
+            } else {
+                year_entry.set_text("");
+                month_entry.set_text("");
+                day_entry.set_text("");
+            }
         }),
     );
 
@@ -117,7 +129,7 @@ fn build_ui(app: &Application) {
     }));
 
     save_button.connect_clicked(
-        clone!(@weak song_upload_button, @weak window, @weak title_entry, @weak artist_entry, @weak album_entry, @weak image_upload_button => move |_| {
+        clone!(@weak song_upload_button, @weak window, @weak title_entry, @weak artist_entry, @weak album_entry, @weak image_upload_button, @weak year_entry, @weak month_entry, @weak day_entry => move |_| {
             if let Some(filename) = song_upload_button.filename() {
                 let mut tag = Tag::read_from_path(&filename).unwrap();
                 let title = title_entry.text();
@@ -151,11 +163,27 @@ fn build_ui(app: &Application) {
                     }
                 }
 
+                if let Ok(year) = year_entry.text().parse::<i32>() {
+                    let time = Timestamp {
+                        year,
+                        month: month_entry.text().parse().ok(),
+                        day: day_entry.text().parse().ok(),
+                        ..Default::default()
+                    };
+                    tag.set_date(time);
+                } else if !month_entry.text().is_empty() || !day_entry.text().is_empty() {
+                    message("Please enter a year!", Some(&window), MessageType::Error, ButtonsType::Ok);
+                    return;
+                } else {
+                    // meaning year, month, and day are all empty
+                    tag.set_date(Timestamp::default());
+                }
+
                 if let Some(file_str) = filename.to_str() {
                     let res = tag.write_to_path(file_str);
                     if let Err(e) = res {
                         message(
-                            format!("Encountered an error while saving: {}", e),
+                            format!("Encountered an error while saving: {e}"),
                             Some(&window),
                             MessageType::Error,
                             ButtonsType::Ok
@@ -167,6 +195,9 @@ fn build_ui(app: &Application) {
                         artist_entry.set_text("");
                         album_entry.set_text("");
                         cover.set_from_icon_name(Some("audio-card"), IconSize::Button);
+                        year_entry.set_text("");
+                        month_entry.set_text("");
+                        day_entry.set_text("");
                         message("Saved successfully!", Some(&window), MessageType::Info, ButtonsType::Ok);
                     }
                 } else {
@@ -179,13 +210,13 @@ fn build_ui(app: &Application) {
     );
 
     year_entry.connect_insert_text(|entry, text, position| {
-        entry_disallow(&entry, &text, |c: char| !c.is_ascii_digit(), position)
+        entry_disallow(entry, text, |c: char| !c.is_ascii_digit(), position);
     });
     month_entry.connect_insert_text(|entry, text, position| {
-        entry_disallow(&entry, &text, |c: char| !c.is_ascii_digit(), position)
+        entry_disallow(entry, text, |c: char| !c.is_ascii_digit(), position);
     });
     day_entry.connect_insert_text(|entry, text, position| {
-        entry_disallow(&entry, &text, |c: char| !c.is_ascii_digit(), position)
+        entry_disallow(entry, text, |c: char| !c.is_ascii_digit(), position);
     });
 
     window.set_application(Some(app));
@@ -198,7 +229,7 @@ fn entry_disallow<F: FnMut(char) -> bool, S: AsRef<str>>(
     mut predicate: F,
     position: &mut i32,
 ) {
-    if text.as_ref().contains(|x| predicate(x)) {
+    if text.as_ref().contains(&mut predicate) {
         glib::signal::signal_stop_emission_by_name(entry, "insert-text");
         entry.insert_text(&text.as_ref().replace(predicate, ""), position);
     }

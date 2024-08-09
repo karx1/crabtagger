@@ -9,3 +9,10 @@ edition = "2021"
 gtk = "0.18.1"
 mime-sniffer = "0.1.2"
 multitag = { git = "https://github.com/karx1/multitag" }
+
+[lints.clippy.pedantic]
+level = "warn"
+priority = -1
+
+[lints.clippy.too_many_lines]
+level="allow"
