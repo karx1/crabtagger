@@ -179,29 +179,25 @@ fn build_ui(app: &Application) {
                     tag.set_date(Timestamp::default());
                 }
 
-                if let Some(file_str) = filename.to_str() {
-                    let res = tag.write_to_path(file_str);
-                    if let Err(e) = res {
-                        message(
-                            format!("Encountered an error while saving: {e}"),
-                            Some(&window),
-                            MessageType::Error,
-                            ButtonsType::Ok
-                        );
-                    } else {
-                        song_upload_button.unselect_all();
-                        image_upload_button.unselect_all();
-                        title_entry.set_text("");
-                        artist_entry.set_text("");
-                        album_entry.set_text("");
-                        cover.set_from_icon_name(Some("audio-card"), IconSize::Button);
-                        year_entry.set_text("");
-                        month_entry.set_text("");
-                        day_entry.set_text("");
-                        message("Saved successfully!", Some(&window), MessageType::Info, ButtonsType::Ok);
-                    }
+                let res = tag.write_to_path(filename);
+                if let Err(e) = res {
+                    message(
+                        format!("Encountered an error while saving: {e}"),
+                        Some(&window),
+                        MessageType::Error,
+                        ButtonsType::Ok
+                    );
                 } else {
-                    message("Filenames containing non-unicode characters are not supported, please rename the file and try again!", Some(&window), MessageType::Error, ButtonsType::Ok);
+                    song_upload_button.unselect_all();
+                    image_upload_button.unselect_all();
+                    title_entry.set_text("");
+                    artist_entry.set_text("");
+                    album_entry.set_text("");
+                    cover.set_from_icon_name(Some("audio-card"), IconSize::Button);
+                    year_entry.set_text("");
+                    month_entry.set_text("");
+                    day_entry.set_text("");
+                    message("Saved successfully!", Some(&window), MessageType::Info, ButtonsType::Ok);
                 }
             } else {
                 message("No song selected!", Some(&window), MessageType::Error, ButtonsType::Ok);
