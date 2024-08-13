@@ -8,7 +8,7 @@ edition = "2021"
 [dependencies]
 gtk = "0.18.1"
 mime-sniffer = "0.1.2"
-multitag = { git = "https://github.com/karx1/multitag" }
+multitag = "0.1.0"
 
 [lints.clippy.pedantic]
 level = "warn"

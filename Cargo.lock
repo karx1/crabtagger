@@ -489,7 +489,8 @@ dependencies = [
 [[package]]
 name = "metaflac"
 version = "0.2.7"
-source = "git+https://github.com/hungl6844/rust-metaflac.git#54b1d2e478a5c99e339d9f9e5f9ee0dd452c04bf"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d0f083edae4a21f5acb1fda8220d1c14fa31f725bfd4e21005a14c2d8944db9b"
 dependencies = [
  "byteorder",
  "hex",
@@ -539,7 +540,8 @@ checksum = "07dcca13d1740c0a665f77104803360da0bdb3323ecce2e93fa2c959a6d52806"
 [[package]]
 name = "multitag"
 version = "0.1.0"
-source = "git+https://github.com/karx1/multitag#df02d9a3d886c7b4dbcdffa12590c2961aa6d034"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1b1bf5b9a989272fddf1e48c874eadf68044a6440c2fd62f1865714bffc902ab"
 dependencies = [
  "id3",
  "metaflac",
