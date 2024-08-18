@@ -9,6 +9,8 @@
       <mime-type>audio/aiff</mime-type>
       <mime-type>audio/flac</mime-type>
       <mime-type>audio/mp4</mime-type>
+      <mime-type>audio/ogg</mime-type>
+      <mime-type>audio/opus</mime-type>
     </mime-types>
   </object>
   <object class="GtkFileFilter" id="filefilter2">

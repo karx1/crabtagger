@@ -38,6 +38,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0c4b4d0bd25bd0b74681c0ad21497610ce1b7c91b1022cd21c80c6fbdd9476b0"
 
 [[package]]
+name = "base64"
+version = "0.22.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "72b3254f16251a8381aa12e40e3c4d2f0199f8c6508fbecb9d91f575e0fbb8c6"
+
+[[package]]
 name = "bitflags"
 version = "2.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -539,14 +545,24 @@ checksum = "07dcca13d1740c0a665f77104803360da0bdb3323ecce2e93fa2c959a6d52806"
 
 [[package]]
 name = "multitag"
-version = "0.1.0"
+version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1b1bf5b9a989272fddf1e48c874eadf68044a6440c2fd62f1865714bffc902ab"
+checksum = "4d91946f107fcc13d00efe813b1c1bf2baaad7c8110a4ebe706b77d836c47a06"
 dependencies = [
  "id3",
  "metaflac",
  "mp4ameta",
+ "opusmeta",
  "thiserror",
+]
+
+[[package]]
+name = "ogg"
+version = "0.9.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5477016638150530ba21dec7caac835b29ef69b20865751d2973fce6be386cf1"
+dependencies = [
+ "byteorder",
 ]
 
 [[package]]
@@ -554,6 +570,18 @@ name = "once_cell"
 version = "1.19.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3fdb12b2476b595f9358c5161aa467c2438859caa136dec86c26fdd2efe17b92"
+
+[[package]]
+name = "opusmeta"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "89547c80deab462cea9d74ac91736c94abf8401f0fc6c7648b41e5955dac963f"
+dependencies = [
+ "base64",
+ "mime-sniffer",
+ "ogg",
+ "thiserror",
+]
 
 [[package]]
 name = "pango"
