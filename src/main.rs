@@ -73,50 +73,62 @@ fn build_ui(app: &Application) {
 
     song_upload_button.connect_file_set(
         clone!(@weak title_entry, @weak artist_entry, @weak album_entry, @weak cover, @weak window, @weak year_entry, @weak month_entry, @weak day_entry => move |b: &FileChooserButton| {
-            println!("File picked!");
-            let filename = b.filename().unwrap();
-            println!("Pathname: {}", filename.to_string_lossy());
-            let tag = Tag::read_from_path(&filename).unwrap();
+            let do_thing = || -> Result<(), multitag::Error> {
+                println!("File picked!");
+                let filename = b.filename().unwrap();
+                println!("Pathname: {}", filename.to_string_lossy());
+                let tag = Tag::read_from_path(&filename).unwrap();
 
-            if let Some(title) = tag.title() {
-                title_entry.set_text(title);
-            } else {
-                title_entry.set_text("");
-            }
-
-            if let Some(artist) = tag.artist() {
-                artist_entry.set_text(&artist);
-            } else {
-                artist_entry.set_text("");
-            }
-
-            if let Some(album) = tag.get_album_info() {
-                album_entry.set_text(&album.title);
-                let picture_maybe = album.cover;
-                if let Some(picture) = picture_maybe {
-                // if picture.mime_type == "image/webp" {
-                    // message("WebP Image detected. Please replace with a JPEG/PNG image for maximum compatibility!", Some(&window), MessageType::Error, ButtonsType::Ok);
-                // }
-                    let bytes = Bytes::from(&picture.data);
-                    let stream = MemoryInputStream::from_bytes(&bytes);
-                    let pixbuf = Pixbuf::from_stream_at_scale(&stream, 200, 200, true, Cancellable::NONE);
-                    cover.set_from_pixbuf(pixbuf.ok().as_ref());
+                if let Some(title) = tag.title() {
+                    title_entry.set_text(title);
                 } else {
-                    cover.set_icon_name(Some("audio-card"));
+                    title_entry.set_text("");
                 }
-            } else {
-                album_entry.set_text("");
-            }
 
-            if let Some(time) = tag.date() {
-                // todo: wait for remove methods in multitag
-                year_entry.set_text(&Some(time.year).filter(|n: &i32| *n != 0).map(|n| format!("{n:04}")).unwrap_or_default());
-                month_entry.set_text(&time.month.filter(|n: &u8| *n != 0).map(|n| format!("{n:02}")).unwrap_or_default());
-                day_entry.set_text(&time.day.filter(|n: &u8| *n != 0).map(|n| format!("{n:02}")).unwrap_or_default());
-            } else {
-                year_entry.set_text("");
-                month_entry.set_text("");
-                day_entry.set_text("");
+                if let Some(artist) = tag.artist() {
+                    artist_entry.set_text(&artist);
+                } else {
+                    artist_entry.set_text("");
+                }
+
+                if let Some(album) = tag.get_album_info() {
+                    album_entry.set_text(&album.title);
+                    let picture_maybe = album.cover;
+                    if let Some(picture) = picture_maybe {
+                        let bytes = Bytes::from(&picture.data);
+                        let stream = MemoryInputStream::from_bytes(&bytes);
+                        let pixbuf = Pixbuf::from_stream_at_scale(&stream, 200, 200, true, Cancellable::NONE);
+                        cover.set_from_pixbuf(pixbuf.ok().as_ref());
+                    } else {
+                        cover.set_icon_name(Some("audio-card"));
+                    }
+                } else {
+                    album_entry.set_text("");
+                }
+
+                if let Some(time) = tag.date() {
+                    // todo: wait for remove methods in multitag
+                    year_entry.set_text(&Some(time.year).filter(|n: &i32| *n != 0).map(|n| format!("{n:04}")).unwrap_or_default());
+                    month_entry.set_text(&time.month.filter(|n: &u8| *n != 0).map(|n| format!("{n:02}")).unwrap_or_default());
+                    day_entry.set_text(&time.day.filter(|n: &u8| *n != 0).map(|n| format!("{n:02}")).unwrap_or_default());
+                } else {
+                    year_entry.set_text("");
+                    month_entry.set_text("");
+                    day_entry.set_text("");
+                }
+                Ok(())
+            };
+
+            match do_thing() {
+                Ok(()) => {}
+                Err(e) => {
+                    message(
+                        format!("Encountered an error while saving: {e}"),
+                        Some(&window),
+                        MessageType::Error,
+                        ButtonsType::Ok
+                    );
+                }
             }
         }),
     );
@@ -130,64 +142,65 @@ fn build_ui(app: &Application) {
 
     save_button.connect_clicked(
         clone!(@weak song_upload_button, @weak window, @weak title_entry, @weak artist_entry, @weak album_entry, @weak image_upload_button, @weak year_entry, @weak month_entry, @weak day_entry => move |_| {
-            if let Some(filename) = song_upload_button.filename() {
-                let mut tag = Tag::read_from_path(&filename).unwrap();
-                let title = title_entry.text();
-                let artist = artist_entry.text();
-                let album = album_entry.text();
-                if !title.is_empty() {
-                    tag.set_title(&title_entry.text());
+            let do_thing = || -> Result<(), multitag::Error> {
+                if let Some(filename) = song_upload_button.filename() {
+                    let mut tag = Tag::read_from_path(&filename)?;
+                    let title = title_entry.text();
+                    let artist = artist_entry.text();
+                    let album = album_entry.text();
+                    if !title.is_empty() {
+                        tag.set_title(&title_entry.text());
 
-                }
-                if !artist.is_empty() {
-                    tag.set_artist(&artist_entry.text());
-                }
-                if !album.is_empty() {
-                    let mut album_info = tag.get_album_info().unwrap_or_default();
-                    album_info.title = album_entry.text().to_string();
-
-                    tag.set_album_info(album_info);
-                }
-
-                if let Some(cover_file) = image_upload_button.file() {
-                    if let Ok((bytes, _)) = cover_file.load_bytes(Cancellable::NONE) {
-                        let bytes_owned = bytes.to_vec();
-                        let mut album_info = tag.get_album_info().unwrap_or_default();
-                        // all mime types should be sniffable so this is ok
-                        let mime_type = bytes_owned.sniff_mime_type().unwrap_or("image/jpeg").to_string();
-                        album_info.cover = Some(Picture {
-                            mime_type,
-                            data: bytes_owned
-                        });
-                        tag.set_album_info(album_info);
                     }
-                }
+                    if !artist.is_empty() {
+                        tag.set_artist(&artist_entry.text());
+                    }
+                    if !album.is_empty() {
+                        let mut album_info = tag.get_album_info().unwrap_or_default();
+                        album_info.title = album_entry.text().to_string();
 
-                if let Ok(year) = year_entry.text().parse::<i32>() {
-                    let time = Timestamp {
-                        year,
-                        month: month_entry.text().parse().ok(),
-                        day: day_entry.text().parse().ok(),
-                        ..Default::default()
-                    };
-                    tag.set_date(time);
-                } else if !month_entry.text().is_empty() || !day_entry.text().is_empty() {
-                    message("Please enter a year!", Some(&window), MessageType::Error, ButtonsType::Ok);
-                    return;
-                } else {
-                    // meaning year, month, and day are all empty
-                    tag.set_date(Timestamp::default());
-                }
+                        tag.set_album_info(album_info)?;
+                    }
 
-                let res = tag.write_to_path(filename);
-                if let Err(e) = res {
-                    message(
-                        format!("Encountered an error while saving: {e}"),
-                        Some(&window),
-                        MessageType::Error,
-                        ButtonsType::Ok
-                    );
+                    if let Some(cover_file) = image_upload_button.file() {
+                        if let Ok((bytes, _)) = cover_file.load_bytes(Cancellable::NONE) {
+                            let bytes_owned = bytes.to_vec();
+                            let mut album_info = tag.get_album_info().unwrap_or_default();
+                            // all mime types should be sniffable so this is ok
+                            let mime_type = bytes_owned.sniff_mime_type().unwrap_or("image/jpeg").to_string();
+                            album_info.cover = Some(Picture {
+                                mime_type,
+                                data: bytes_owned
+                            });
+                            tag.set_album_info(album_info)?;
+                        }
+                    }
+
+                    if let Ok(year) = year_entry.text().parse::<i32>() {
+                        let time = Timestamp {
+                            year,
+                            month: month_entry.text().parse().ok(),
+                            day: day_entry.text().parse().ok(),
+                            ..Default::default()
+                        };
+                        tag.set_date(time);
+                    } else if !month_entry.text().is_empty() || !day_entry.text().is_empty() {
+                        message("Please enter a year!", Some(&window), MessageType::Error, ButtonsType::Ok);
+                        return Ok(());
+                    } else {
+                        // meaning year, month, and day are all empty
+                        tag.set_date(Timestamp::default());
+                    }
+
+                    tag.write_to_path(filename)?;
                 } else {
+                    message("No song selected!", Some(&window), MessageType::Error, ButtonsType::Ok);
+                }
+                Ok(())
+            };
+
+            match do_thing() {
+                Ok(()) => {
                     song_upload_button.unselect_all();
                     image_upload_button.unselect_all();
                     title_entry.set_text("");
@@ -198,9 +211,15 @@ fn build_ui(app: &Application) {
                     month_entry.set_text("");
                     day_entry.set_text("");
                     message("Saved successfully!", Some(&window), MessageType::Info, ButtonsType::Ok);
+                },
+                Err(e) => {
+                    message(
+                        format!("Encountered an error while saving: {e}"),
+                        Some(&window),
+                        MessageType::Error,
+                        ButtonsType::Ok
+                    );
                 }
-            } else {
-                message("No song selected!", Some(&window), MessageType::Error, ButtonsType::Ok);
             }
         }),
     );
