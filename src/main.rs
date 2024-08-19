@@ -1,3 +1,4 @@
+use anyhow::Error;
 use gio::prelude::FileExt;
 use gtk::gdk::Screen;
 use gtk::gdk_pixbuf::Pixbuf;
@@ -73,7 +74,7 @@ fn build_ui(app: &Application) {
 
     song_upload_button.connect_file_set(
         clone!(@weak title_entry, @weak artist_entry, @weak album_entry, @weak cover, @weak window, @weak year_entry, @weak month_entry, @weak day_entry => move |b: &FileChooserButton| {
-            let do_thing = || -> Result<(), multitag::Error> {
+            let do_thing = || -> Result<(), Error> {
                 println!("File picked!");
                 let filename = b.filename().unwrap();
                 println!("Pathname: {}", filename.to_string_lossy());
@@ -97,8 +98,8 @@ fn build_ui(app: &Application) {
                     if let Some(picture) = picture_maybe {
                         let bytes = Bytes::from(&picture.data);
                         let stream = MemoryInputStream::from_bytes(&bytes);
-                        let pixbuf = Pixbuf::from_stream_at_scale(&stream, 200, 200, true, Cancellable::NONE);
-                        cover.set_from_pixbuf(pixbuf.ok().as_ref());
+                        let pixbuf = Pixbuf::from_stream_at_scale(&stream, 200, 200, true, Cancellable::NONE)?;
+                        cover.set_from_pixbuf(Some(&pixbuf));
                     } else {
                         cover.set_icon_name(Some("audio-card"));
                     }
@@ -142,7 +143,7 @@ fn build_ui(app: &Application) {
 
     save_button.connect_clicked(
         clone!(@weak song_upload_button, @weak window, @weak title_entry, @weak artist_entry, @weak album_entry, @weak image_upload_button, @weak year_entry, @weak month_entry, @weak day_entry => move |_| {
-            let do_thing = || -> Result<(), multitag::Error> {
+            let do_thing = || -> Result<(), Error> {
                 if let Some(filename) = song_upload_button.filename() {
                     let mut tag = Tag::read_from_path(&filename)?;
                     let title = title_entry.text();
