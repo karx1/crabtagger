@@ -93,7 +93,7 @@ fn build_ui(app: &Application) {
                 }
 
                 if let Some(album) = tag.get_album_info() {
-                    album_entry.set_text(&album.title);
+                    album_entry.set_text(&album.title.unwrap_or_default());
                     let picture_maybe = album.cover;
                     if let Some(picture) = picture_maybe {
                         let bytes = Bytes::from(&picture.data);
@@ -158,7 +158,7 @@ fn build_ui(app: &Application) {
                     }
                     if !album.is_empty() {
                         let mut album_info = tag.get_album_info().unwrap_or_default();
-                        album_info.title = album_entry.text().to_string();
+                        album_info.title = Some(album_entry.text().to_string());
 
                         tag.set_album_info(album_info)?;
                     }

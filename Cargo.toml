@@ -9,7 +9,7 @@ edition = "2021"
 anyhow = "1.0.86"
 gtk = "0.18.1"
 mime-sniffer = "0.1.2"
-multitag = "0.2"
+multitag = "0.3"
 
 [lints.clippy.pedantic]
 level = "warn"
